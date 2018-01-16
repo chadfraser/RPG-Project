@@ -14,6 +14,11 @@ import time
 # PERCEPTION: Finding treasure, traps, hidden doors
 
 
+def printWithDelay(text, delayTime=1):
+    print(text)
+    time.sleep(delayTime)
+
+
 class Character:
     def __init__(self):
         self.name = ""
@@ -108,28 +113,22 @@ class Character:
     # Prints the damage dealt, and if the attack was a critical hit
     def printDamageAndCritical(self, damage, wasCritical):
         if wasCritical:
-            print("--Critical hit!")
-            time.sleep(1)
-        print("--{} takes {} damage.".format(self.name, damage))
-        time.sleep(1)
+            printWithDelay("--Critical hit!")
+        printWithDelay("--{} takes {} damage.".format(self.name, damage))
 
     # Prints the character's current HP
     def printCurrentHP(self):
-        print("--{}'s HP is now {}.".format(self.name, self.currentHP))
-        time.sleep(1)
+        printWithDelay("--{}'s HP is now {}.".format(self.name, self.currentHP))
 
     # Prints that the target was killed
     def printDeathMessage(self):
-        print("--{} has fallen.".format(self.name))
-        time.sleep(1)
+        printWithDelay("--{} has fallen.".format(self.name))
 
     def printAttackMiss(self):
-        print("--{} missed!".format(self.name))
-        time.sleep(1)
+        printWithDelay("--{} missed!".format(self.name))
 
     def printAmountHealed(self, healHPValue):
-        print("--{} healed {} HP!".format(self.name, healHPValue))
-        time.sleep(1)
+        printWithDelay("--{} healed {} HP!".format(self.name, healHPValue))
 
 
 class Hero(Character):
@@ -162,7 +161,7 @@ class Hero(Character):
         self.modifiedEvasion = self.evasion
         self.modifiedStrikeCount = self.strikeCount
         self.modifiedAccuracy = self.accuracy
-        self.modifiedSpeed= self.speed
+        self.modifiedSpeed = self.speed
         self.modifiedCriticalRate = self.criticalRate
         self.modifiedScouting = self.scouting
         self.modifiedSpirituality = self.spirituality
@@ -171,6 +170,40 @@ class Hero(Character):
         self.modifiedEndurance = self.endurance
         self.modifiedReflex = self.reflex
         self.modifiedLuck = self.luck
+
+        self.exhaustionDamage = self.damage
+        self.exhaustionDefense = self.defense
+        self.exhaustionIntelligence = self.intelligence
+        self.exhaustionMagicDefense = self.magicDef
+        self.exhaustionEvasion = self.evasion
+        self.exhaustionStrikeCount = self.strikeCount
+        self.exhaustionAccuracy = self.accuracy
+        self.exhaustionSpeed = self.speed
+        self.exhaustionCriticalRate = self.criticalRate
+        self.exhaustionScouting = self.scouting
+        self.exhaustionSpirituality = self.spirituality
+        self.exhaustionCharisma = self.charisma
+        self.exhaustionPerception = self.perception
+        self.exhaustionReflex = self.reflex
+        self.exhaustionLuck = self.luck
+
+    def setHeroDefaultValues(self):
+        self.modifiedDamage = max(1, self.strength // 2) + self.exhaustionDamage
+        self.modifiedDefense = self.armor + self.exhaustionDefense
+        self.modifiedIntelligence = self.intelligence + self.exhaustionIntelligence
+        self.modifiedMagicDefense = self.magicDef + self.exhaustionMagicDefense
+        self.modifiedEvasion = self.agility + self.exhaustionEvasion
+        self.modifiedStrikeCount = 1 + self.weaponSpeed // 32 + self.exhaustionStrikeCount
+        self.modifiedAccuracy = self.accuracy + self.exhaustionAccuracy
+        self.modifiedSpeed = self.speed + self.exhaustionSpeed
+        self.modifiedCriticalRate = self.criticalRate + self.exhaustionCriticalRate
+        self.modifiedScouting = self.scouting + self.exhaustionScouting
+        self.modifiedSpirituality = self.spirituality + self.exhaustionSpirituality
+        self.modifiedCharisma = self.charisma + self.exhaustionCharisma
+        self.modifiedPerception = self.perception + self.exhaustionPerception
+        self.modifiedEndurance = self.endurance
+        self.modifiedReflex = self.reflex + self.exhaustionReflex
+        self.modifiedLuck = self.luck + self.exhaustionLuck
 
     def applyStatVarianceOnInitialization(self):
         self.maxHP = max(1, self.maxHP + random.randint(-5, 5))
@@ -209,21 +242,33 @@ class Hero(Character):
 
     def sufferExhaustion(self):
         self.exhaustion += 1
-        highValueStatList = [self.modifiedDamage, self.modifiedIntelligence, self.modifiedMagicDefense,
-                             self.modifiedAccuracy, self.modifiedDefense, self.modifiedStrikeCount,
-                             self.modifiedCriticalRate]
-        highValueStatList = [stat - random.randint(1, 3) if self.exhaustion + random.randint(1, 10) >= 10 else stat
-                             for stat in highValueStatList]
-        self.modifiedDamage, self.modifiedIntelligence, self.modifiedMagicDefense, self.modifiedAccuracy, \
-            self.modifiedDefense, self.modifiedStrikeCount, self.modifiedCriticalRate = highValueStatList
+        lowValueExhaustionStats = [self.exhaustionDamage, self.exhaustionIntelligence, self.exhaustionMagicDefense,
+                                   self.exhaustionAccuracy, self.exhaustionDefense, self.exhaustionStrikeCount,
+                                   self.exhaustionCriticalRate]
+        highValueExhaustionStats = [self.exhaustionEvasion, self.exhaustionSpeed, self.exhaustionScouting,
+                                    self.exhaustionSpirituality, self.exhaustionLuck, self.exhaustionCharisma,
+                                    self.exhaustionPerception, self.exhaustionReflex]
+        lowValueStatPenalty = [(random.randint(1, 4) if self.exhaustion + random.randint(1, 10) >= 8 else 0)
+                               for _ in range(7)]
+        highValueStatPenalty = [(random.randint(1, 3) if self.exhaustion + random.randint(1, 10) >= 8 else 0)
+                                for _ in range(8)]
 
-        lowValueStatList = [self.modifiedEvasion, self.modifiedSpeed, self.modifiedScouting, self.modifiedSpirituality,
-                            self.modifiedLuck, self.modifiedCharisma, self.modifiedPerception, self.modifiedReflex]
+        self.exhaustionDamage, self.exhaustionIntelligence, self.exhaustionMagicDefense, self.exhaustionAccuracy, \
+            self.exhaustionDefense, self.exhaustionStrikeCount,\
+            self.exhaustionCriticalRate = [x - y for x, y in zip(lowValueExhaustionStats, lowValueStatPenalty)]
 
-        lowValueStatList = [stat - random.randint(1, 3) if self.exhaustion + random.randint(1, 10) >= 8 else stat
-                            for stat in lowValueStatList]
-        self.modifiedEvasion, self.modifiedSpeed, self.modifiedScouting, self.modifiedSpirituality, \
-            self.modifiedLuck, self.modifiedCharisma, self.modifiedPerception, self.modifiedReflex = lowValueStatList
+        self.exhaustionEvasion, self.exhaustionSpeed, self.exhaustionScouting, self.exhaustionSpirituality, \
+            self.exhaustionLuck, self.exhaustionCharisma, self.exhaustionPerception,\
+            self.exhaustionReflex = [x - y for x, y in zip(highValueExhaustionStats, highValueStatPenalty)]
+        printWithDelay("{} is becoming exhausted!".format(self.name), 2)
+
+    def shouldRun(self, listOfEnemies):
+        listOfEnemyEvasion = [enemy.evasion for enemy in listOfEnemies if not enemy.isIncapacitated()]
+        maxEnemyEvasion = max(listOfEnemyEvasion)
+        runningDiceRoll = random.randint(0, 2 * maxEnemyEvasion)
+        if self.luck > runningDiceRoll:
+            return True
+        return False
 
 
 class Fencer(Hero):
@@ -241,7 +286,7 @@ class Fencer(Hero):
         self.agility = 15
         self.weaponSpeed = 15
         self.accuracy = 15
-        self.speed = 10
+        self.speed = 15
         self.criticalRate = 0
 
         self.scouting = 5
@@ -249,7 +294,7 @@ class Fencer(Hero):
         self.charisma = 5
         self.perception = 15
         self.endurance = 40
-        self.reflex = 15
+        self.reflex = 10
         self.luck = 5
 
 
@@ -295,7 +340,7 @@ class Archer(Hero):
         self.agility = 12
         self.weaponSpeed = 20
         self.accuracy = 25
-        self.speed = 9
+        self.speed = 10
         self.criticalRate = 2
 
         self.scouting = 15
@@ -303,7 +348,7 @@ class Archer(Hero):
         self.charisma = 20
         self.perception = 25
         self.endurance = 40
-        self.reflex = 15
+        self.reflex = 5
         self.luck = 5
 
 
@@ -322,7 +367,7 @@ class Mage(Hero):
         self.agility = 12
         self.weaponSpeed = 5
         self.accuracy = 10
-        self.speed = 10
+        self.speed = 8
         self.criticalRate = 0
 
         self.scouting = 15
@@ -349,7 +394,7 @@ class Druid(Hero):
         self.agility = 12
         self.weaponSpeed = 15
         self.accuracy = 20
-        self.speed = 2
+        self.speed = 5
         self.criticalRate = 0
 
         self.scouting = 25
@@ -376,7 +421,7 @@ class Summoner(Hero):
         self.agility = 10
         self.weaponSpeed = 14
         self.accuracy = 15
-        self.speed = 5
+        self.speed = 8
         self.criticalRate = 0
 
         self.scouting = 20
@@ -403,7 +448,7 @@ class Healer(Hero):
         self.agility = 10
         self.weaponSpeed = 18
         self.accuracy = 20
-        self.speed = 10
+        self.speed = 15
         self.criticalRate = 4
 
         self.scouting = 15
@@ -430,7 +475,7 @@ class Apprentice(Hero):
         self.agility = 15
         self.weaponSpeed = 16
         self.accuracy = 18
-        self.speed = 3
+        self.speed = 5
         self.criticalRate = 0
 
         self.scouting = 10
@@ -457,7 +502,7 @@ class Scholar(Hero):
         self.agility = 7
         self.weaponSpeed = 14
         self.accuracy = 15
-        self.speed = 6
+        self.speed = 8
         self.criticalRate = 0
 
         self.scouting = 5
@@ -538,7 +583,7 @@ class Tactician(Hero):
         self.agility = 12
         self.weaponSpeed = 20
         self.accuracy = 18
-        self.speed = 5
+        self.speed = 7
         self.criticalRate = 2
 
         self.scouting = 10
@@ -558,7 +603,7 @@ class Scout(Hero):
         super().__init__()
         self.name = name
         self.maxHP = 25
-        self.strength = 5
+        self.strength = 4
         self.armor = 0
         self.intelligence = 2
         self.magicDef = 5
@@ -601,7 +646,7 @@ class Vassal(Hero):
         self.perception = 15
         self.endurance = 75
         self.reflex = 25
-        self.luck = 15
+        self.luck = 30
 
 
 class Messenger(Hero):
@@ -619,7 +664,7 @@ class Messenger(Hero):
         self.agility = 13
         self.weaponSpeed = 5
         self.accuracy = 15
-        self.speed = 10
+        self.speed = 15
         self.criticalRate = 0
 
         self.scouting = 20
@@ -628,13 +673,19 @@ class Messenger(Hero):
         self.perception = 15
         self.endurance = 55
         self.reflex = 25
-        self.luck = 15
+        self.luck = 30
 
 
 class Enemy(Character):
+    identifyCounter = 0
+    identifyPenalty = 0
+    identifyValueList = [0, 0, 0]
+
     def __init__(self):
         Character.__init__(self)
+        self.pluralName = ""
         self.trueName = ""
+        self.pluralTrueName = ""
         self.currentHP = self.maxHP
         self.contactStatus = []
         self.spellChance = 0
@@ -644,27 +695,31 @@ class Enemy(Character):
         if type(self).identifyCounter >= 1:
             self.name = self.trueName
 
-    def identify(self, identificationScore):
+    def beIdentified(self, identificationScore):
         identificationDiceRoll = random.randint(1, 50)
-        identificationResult = identificationDiceRoll + identificationScore - self.identifyPenalty
-        if identificationResult >= self.identifyValueList[3]:
+        identificationResult = identificationDiceRoll + identificationScore - type(self).identifyPenalty
+        if identificationResult >= type(self).identifyValueList[2]:
             type(self).identifyCounter = max(type(self).identifyCounter, 3)
-        elif identificationResult >= self.identifyValueList[2]:
+        elif identificationResult >= type(self).identifyValueList[1]:
             type(self).identifyCounter = max(type(self).identifyCounter, 2)
-        elif identificationResult >= self.identifyValueList[1]:
+        elif identificationResult >= type(self).identifyValueList[0]:
             type(self).identifyCounter = max(type(self).identifyCounter, 1)
-            print("{} identified as a {}.".format(self.name, self.trueName))
+            printWithDelay("{} identified as a {}.".format(self.name, self.trueName))
         else:
             pass
 
 
 class Goblin(Enemy):
     identifyCounter = 0
+    identifyPenalty = 0
+    identifyValueList = [0, 0, 0]
 
     def __init__(self, name="Armed Humanoid"):
         Enemy.__init__(self)
         self.name = name
+        self.pluralName = "Armed Humanoids"
         self.trueName = "Goblin"
+        self.pluralTrueName = "Goblins"
         self.maxHP = 18
         self.damage = 8
         self.defense = 3
@@ -676,5 +731,35 @@ class Goblin(Enemy):
         self.criticalRate = 4
         self.experience = 6
 
+    def checkIdentifyCounterForName(self):
+        if self.identifyCounter > 0:
+            self.name = self.trueName
+            self.pluralName = self.pluralTrueName
 
-pass
+
+class Hobgoblin(Enemy):
+    identifyCounter = 0
+    identifyPenalty = 0
+    identifyValueList = [0, 0, 0]
+
+    def __init__(self, name="Armed Humanoid"):
+        Enemy.__init__(self)
+        self.name = name
+        self.pluralName = "Armed Humanoids"
+        self.trueName = "Hobgoblin"
+        self.pluralTrueName = "Hobgoblins"
+        self.maxHP = 18
+        self.damage = 8
+        self.defense = 3
+        self.intelligence = 1
+        self.magicDef = 16
+        self.evasion = 6
+        self.accuracy = 8
+        self.speed = 4
+        self.criticalRate = 4
+        self.experience = 6
+
+    def checkIdentifyCounterForName(self):
+        if self.identifyCounter > 0:
+            self.name = self.trueName
+            self.pluralName = self.pluralTrueName
