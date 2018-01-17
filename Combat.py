@@ -1,5 +1,4 @@
 import random
-import time
 from collections import Counter
 from operator import itemgetter
 import Characters as Char
@@ -19,11 +18,17 @@ def checkIfAnyEnemiesAlive(combatantList):
     return False
 
 
+def chooseAggressionEnemyTarget(heroList):
+    aggressionList = [(hero.aggression + random.randint(-10, 10)) for hero in heroList]
+    targetIndex = aggressionList.index(max(aggressionList))
+    return heroList[targetIndex]
+
+
 def getHeroReflex(character):
     if isinstance(character, Char.Hero):
-        return character.reflex + random.randint(-5, 5)
+        return character.reflex["modified"] + random.randint(-5, 5)
     else:
-        return character.speed * 2 + random.randint(-5, 5)
+        return character.speed["modified"] * 2 + random.randint(-5, 5)
 
 
 def chooseTarget(targetList):
@@ -37,8 +42,7 @@ def chooseTarget(targetList):
             return int(targetChosen)
         elif targetChosen.lower() == "c":
             return None
-        print("That is not a valid response.")
-        time.sleep(1)
+        Char.printWithDelay("That is not a valid response.")
 
 
 def determineFirstRoundInitiative(combatantList):
@@ -50,7 +54,7 @@ def determineFirstRoundInitiative(combatantList):
 
 def addCharacterToInitiativeQueue(newCharacter, combatantListWithInitiative):
     combatantListWithInitiative = [(character[0], character[1] + 5) for character in combatantListWithInitiative]
-    speedValue = newCharacter.speed + random.randint(-5, 5)
+    speedValue = newCharacter.speed["modified"] + random.randint(-5, 5)
     combatantListWithInitiative.append((newCharacter, speedValue))
     return sorted(combatantListWithInitiative, key=itemgetter(1), reverse=True)
 
@@ -63,9 +67,9 @@ def printEnemyFormations(enemyList):
     enemyCounter = Counter(enemyIdentityList)
     for enemyName, enemyQuantity in enemyCounter.items():
         if enemyQuantity == 1:
-            print("{} {}".format(ordinalDict[enemyQuantity], enemyName[0]))
+            Char.printWithDelay("--{} {}".format(ordinalDict[enemyQuantity], enemyName[0]))
         else:
-            print("{} {}".format(ordinalDict[enemyQuantity], enemyName[1]))
+            Char.printWithDelay("--{} {}".format(ordinalDict[enemyQuantity], enemyName[1]))
 
 
 def selectTurnAction(actingHero, heroList, enemyList):
@@ -92,11 +96,12 @@ def applyTurnAction(actingHero, heroList, enemyList, actionChosen):
         targetChosen = chooseTarget([enemy.name for enemy in livingEnemies])
         if targetChosen:
             actingHero.attackTarget(livingEnemies[targetChosen - 1])
+            actingHero.aggression += 1
             actingHero.actionCount += 1
             actingHero.checkCombatExhaustion()
             turnCompleted = True
     elif actionChosen == 2:
-        pass  # turnCompleted = actingHero.selectAndCastSpell(heroList, enemyList)
+        turnCompleted = selectSkill(actingHero, heroList, enemyList)
     elif actionChosen == 3:
         pass  # turnCompleted = playerCurrentInventory.useItem(heroList + enemyList)
     elif actionChosen == 4:
@@ -104,15 +109,31 @@ def applyTurnAction(actingHero, heroList, enemyList, actionChosen):
     elif actionChosen == 5:
         examineBattlefield(heroList, enemyList)
     elif actionChosen == 6:
+        actingHero.aggression = min(0, actingHero.aggression - 2)
         Char.printWithDelay("{} passes.".format(actingHero.name), 0.5)
         turnCompleted = True
     return turnCompleted
 
 
+def selectSkill(actingHero, heroList, enemyList):
+    skillList = [skill for skill in actingHero.knownSkills]
+    while True:
+        Char.printWithDelay("Choose which skill you'd like to use.")
+        for index, skill in enumerate(skillList):
+            print("\t\t{}. {}  ({} conviction)".format(index + 1, skill.name, skill.cost))
+        print("\t\tc. Cancel")
+        targetChosen = input()
+        if targetChosen.isnumeric() and 0 < int(targetChosen) <= len(skillList):
+            return skillList[int(targetChosen) - 1].useSkill(actingHero, heroList, enemyList)
+        elif targetChosen.lower() == "c":
+            return False
+        Char.printWithDelay("That is not a valid response.")
+
+
 def attemptToRun(actingHero, enemyList):
     if actingHero.shouldRun(enemyList):
         for enemy in enemyList:
-            enemy.currentHP = 0
+            enemy.HP["max"] = 0
         Char.printWithDelay("Escaped!", 1.5)
     else:
         Char.printWithDelay("You couldn't escape!", 1.5)
@@ -123,7 +144,7 @@ def attemptToRun(actingHero, enemyList):
 
 def examineBattlefield(heroList, enemyList):
     for hero in heroList:
-        print("{}'s HP: {} / {}".format(hero.name, hero.currentHP, hero.maxHP))
+        print("--{}'s HP: {} / {}".format(hero.name, hero.HP["max"], hero.HP["max"]))
         heroStatusList = [statusEffect.name for statusEffect in hero.status]
         heroStatusString = ', '.join(heroStatusList)
         Char.printWithDelay("{}'s status: {}".format(hero.name, heroStatusString or 'Healthy'))
@@ -135,11 +156,12 @@ def examineBattlefield(heroList, enemyList):
     printEnemyFormations(livingUnidentifiedEnemyList)
     for livingEnemy in livingIdentifiedEnemyList:
         if livingEnemy.identifyCounter >= 3:
-            Char.printWithDelay("{}'s HP: {} / {}".format(livingEnemy.name, livingEnemy.currentHP, livingEnemy.maxHP))
+            Char.printWithDelay("--{}'s HP: {} / {}".format(livingEnemy.name, livingEnemy.HP["current"],
+                                                            livingEnemy.HP["max"]))
         else:
-            Char.printWithDelay("{} (Appears {})".format(livingEnemy.name, "healthy" if
-                                livingEnemy.currentHP / livingEnemy.maxHP >= 0.7 else "injured" if
-                                livingEnemy.currentHP / livingEnemy.maxHP >= 0.2 else "dying"))
+            Char.printWithDelay("--{} (Appears {})".format(livingEnemy.name, "healthy" if
+                                livingEnemy.HP["current"] / livingEnemy.HP["max"] >= 0.7 else "injured" if
+                                livingEnemy.HP["current"] / livingEnemy.HP["max"] >= 0.2 else "dying"))
     Char.printWithDelay("", 1.5)
 
 
@@ -158,31 +180,21 @@ def startCombat(heroList, enemyList):
         if currentActingCombatant.isIncapacitated():
             continue
         elif isinstance(currentActingCombatant, Char.Hero):
+            currentActingCombatant.controlStartOfTurnSkills(heroList, enemyList)
             selectTurnAction(currentActingCombatant, heroList, enemyList)
             initiativeList = addCharacterToInitiativeQueue(currentActingCombatant, initiativeList)
         elif isinstance(currentActingCombatant, Char.Enemy):
             livingHeroes = [hero for hero in heroList if not hero.isIncapacitated()]
-            targetChosen = random.choice(livingHeroes)
+            targetChosen = chooseAggressionEnemyTarget(livingHeroes)
+            currentActingCombatant.printAttackTarget(targetChosen)
+            for hero in heroList:
+                hero.controlOnEnemyAttackSkills(heroList, enemyList, currentActingCombatant, targetChosen)
             currentActingCombatant.attackTarget(targetChosen)
+            for hero in heroList:
+                hero.controlAfterEnemyAttackSkills(heroList, enemyList, currentActingCombatant, targetChosen)
             initiativeList = addCharacterToInitiativeQueue(currentActingCombatant, initiativeList)
         if not checkIfAnyEnemiesAlive(listOfCombatants) or not checkIfAnyHeroesAlive(listOfCombatants):
             battleInProgress = False
             for hero in heroList:
-                hero.actionCount = 0
+                hero.aggression = hero.actionCount = 0
                 hero.setHeroDefaultValues()
-
-
-hero1 = Char.Fencer()
-hero2 = Char.Healer()
-enemy1 = Char.Goblin()
-enemy2 = Char.Goblin()
-enemy3 = Char.Hobgoblin()
-
-heroes = [hero1, hero2]
-enemies = [enemy1, enemy2, enemy3]
-hero1.currentHP = hero1.maxHP
-hero2.currentHP = hero2.maxHP
-hero1.luck = hero1.defense = hero1.currentHP = 100
-hero1.endurance = 1
-Char.Hobgoblin.identifyCounter = 3
-startCombat(heroes, enemies)
